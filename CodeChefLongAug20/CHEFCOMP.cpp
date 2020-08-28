@@ -1,4 +1,7 @@
+// Problem Link : https://www.codechef.com/AUG20B/problems/CHEFCOMP
+
 #include <bits/stdc++.h>
+
 using namespace std;
 #define whatis(x) cerr << #x << " is : " << x << endl;
 #define IOS                           \
@@ -7,62 +10,73 @@ using namespace std;
 typedef long long ll;
 typedef unsigned long long ull;
 
-bool visited[1000006];
-int days[1000006];
+int parent[300000];
+int ans[300000];
+int days[300000];
+bool visited[300000];
+vector<int> newTree[3000000];
+vector<int> oldTree[3000000];
 
-// Recursively eat the fruits
-void dfs(int** arr, int* b, int node, int& a, int& n, int& day) {
-    visited[node] = true;
-    b[node] -= min(b[node], a);
-    if (days[node] == -1 && b[node] == 0) {
-        days[node] = day;
+int findParent(int u) {
+    if (u == parent[u])
+        return u;
+    return parent[u] = findParent(parent[u]);
+}
+
+void dfs(vector<int> newTree[], int curr, int p[], int a[], int b[], vector<ll>& garden, vector<int>& totalDays) {
+    visited[curr] = true;
+    garden.push_back(a[curr] + garden.back());
+    totalDays.push_back(days[curr]);
+
+    if (b[curr] <= garden.back()) {
+        int ind = lower_bound(garden.begin(), garden.end(), b[curr]) - garden.begin();
+        ans[curr] = totalDays[ind];
     }
-    for (int i = 1; i <= n; i++) {
-        if (arr[node][i] && !visited[i]) {
-            dfs(arr, b, i, a, n, day);
+
+    for (int child : newTree[curr]) {
+        if (!visited[child]) {
+            dfs(newTree, child, p, a, b, garden, totalDays);
         }
     }
-    visited[node] = false;
+
+    garden.pop_back();
+    totalDays.pop_back();
 }
 
 int main() {
+    IOS;
     int t;
     cin >> t;
     while (t--) {
+        // Initialization
+        memset(visited, false, sizeof(visited));
+        memset(ans, -1, sizeof(ans));
+        memset(days, 0, sizeof(days));
         int n;
         cin >> n;
 
-        memset(visited, false, sizeof(visited));
-        memset(days, -1, sizeof(days));
-
-        // Declare the array
-        int** arr = new int*[n + 1];
-        for (int i = 0; i <= n; i++) {
-            arr[i] = new int[n + 1];
-        }
-
-        // Initialize the array
-        for (int i = 0; i <= n; i++) {
-            for (int j = 0; j <= n; j++) {
-                arr[i][j] = 0;
-            }
-        }
-
-        // Connect the nodes
-        for (int i = 1; i < n; i++) {
-            int u, v;
-            cin >> u >> v;
-            arr[u][v] = 1;
-            arr[v][u] = 1;
-        }
-
-        // Declare the arrays
         int* p = new int[n + 1];
         int* a = new int[n + 1];
         int* b = new int[n + 1];
 
+        // Parent Initialization
+        for (int i = 1; i <= n + 1; i++) {
+            oldTree[i].clear();
+            newTree[i].clear();
+            parent[i] = i;
+        }
+
+        // INPUT
+        int u, v;
+        for (int i = 1; i <= n - 1; i++) {
+            cin >> u >> v;
+            oldTree[u].push_back(v);
+            oldTree[v].push_back(u);
+        }
+
         for (int i = 1; i <= n; i++) {
             cin >> p[i];
+            days[p[i]] = i;
         }
 
         for (int i = 1; i <= n; i++) {
@@ -73,32 +87,43 @@ int main() {
             cin >> b[i];
         }
 
-        // DFS on the tree from the current node
-        // and eat the fruits of the reachable node
-        for (int i = 1; i <= n; i++) {
-            dfs(arr, b, p[i], a[p[i]], n, i);
-            for (int j = 1; j <= n; j++) {
-                if (arr[p[i]][j] == 1) {
-                    arr[p[i]][j] = 0;
-                    arr[j][p[i]] = 0;
+        // Form new tree
+        for (int i = n; i > 0; i--) {
+            int node = p[i];
+            visited[node] = true;
+            for (int child : oldTree[node]) {
+                if (visited[child]) {
+                    int par = findParent(child);
+                    newTree[node]
+                        .push_back(par);
+                    newTree[par]
+                        .push_back(node);
+                    parent[par] = node;
                 }
             }
         }
 
+        // for (int i = 1; i <= n; i++) {
+        //     cout << i << " :: ";
+        //     for (int child : newTree[i]) {
+        //         cout << child << " ";
+        //     }
+        //     cout << endl;
+        // }
+
+        vector<ll> garden;
+        vector<int> totalDays;
+
+        garden.push_back(0);
+        totalDays.push_back(0);
+
+        memset(visited, false, sizeof(visited));
+        dfs(newTree, p[1], p, a, b, garden, totalDays);
+
         for (int i = 1; i <= n; i++) {
-            cout << days[i] << " ";
+            cout << ans[i] << " ";
         }
-        cout << endl;
-
-        // Delete the allocated memory
-        for (int i = 0; i <= n; i++) {
-            delete[] arr[i];
-        }
-
-        delete[] arr;
-        delete[] p;
-        delete[] a;
-        delete[] b;
+        cout << "\n";
     }
     return 0;
 }
